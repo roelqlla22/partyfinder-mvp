@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ORGANIZER
+  ADMIN
+}
+
+enum TicketStatus {
+  RESERVED
+  PAID
+  CHECKED_IN
+  REFUNDED
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizer OrganizerProfile?
+  orders    Order[]
+  tickets   Ticket[]
+  reviews   Review[]
+}
+
+model OrganizerProfile {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  displayName  String
+  phone        String?
+  instagram    String?
+  verified     Boolean @default(false)
+  events       Event[]
+  @@map("organizers")
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  lat       Float?
+  lng       Float?
+  capacity  Int?
+  events    Event[]
+}
+
+model Event {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  coverUrl    String?
+  startsAt    DateTime
+  endsAt      DateTime
+  visibility  Visibility  @default(PUBLIC)
+  minAge      Int?
+  dressCode   String?
+  tags        String[]
+
+  organizerId String
+  organizer   OrganizerProfile @relation(fields: [organizerId], references: [id])
+
+  venueId     String?
+  venue       Venue? @relation(fields: [venueId], references: [id])
+
+  ticketTypes TicketType[]
+  reviews     Review[]
+  favorites   Favorite[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TicketType {
+  id           String  @id @default(cuid())
+  eventId      String
+  name         String
+  priceMXN     Int
+  totalQty     Int
+  soldQty      Int     @default(0)
+  perUserLimit Int?
+  Event        Event   @relation(fields: [eventId], references: [id])
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  userId      String
+  amountMXN   Int
+  status      String
+  stripeId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  items       OrderItem[]
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model OrderItem {
+  id           String     @id @default(cuid())
+  orderId      String
+  ticketTypeId String
+  quantity     Int
+  unitPriceMXN Int
+  order        Order      @relation(fields: [orderId], references: [id])
+  ticketType   TicketType @relation(fields: [ticketTypeId], references: [id])
+  tickets      Ticket[]
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  orderItemId String
+  userId      String
+  status      TicketStatus @default(RESERVED)
+  qrSecret    String       @unique
+  checkedInAt DateTime?
+  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Favorite {
+  id      String @id @default(cuid())
+  eventId String
+  userId  String
+  event   Event  @relation(fields: [eventId], references: [id])
+  user    User   @relation(fields: [userId], references: [id])
+  @@unique([eventId, userId])
+}

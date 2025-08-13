@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --ring: 220 38 38; } /* rojo-600 */
+html, body { height: 100%; }
+* { box-sizing: border-box; }
+
+body { @apply bg-white text-zinc-900; }
+header { @apply bg-white border-b border-zinc-200; }
+.container { @apply max-w-6xl mx-auto px-4; }
+
+.card { @apply bg-white rounded-2xl shadow border border-zinc-200 p-4; }
+
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition; }
+.btn-primary { @apply text-white bg-red-600 hover:bg-red-700 shadow; }
+.btn-outline { @apply border border-red-600 text-red-700 hover:bg-red-50; }
+.btn-ghost { @apply text-zinc-600 hover:bg-zinc-100; }
+
+.input { @apply w-full rounded-xl border border-zinc-300 bg-white text-zinc-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400; }
+.label { @apply text-sm font-medium text-zinc-700; }
+.helper { @apply text-xs text-zinc-500; }
+
+a { @apply underline-offset-4; }
+a:hover { @apply underline; }
+/* --- Tema blanco/rojo --- */
+:root{ --accent:#dc2626 }
+.btn-primary{ background:#dc2626 }
+.btn-primary:hover{ filter:brightness(0.95) }
+
+
+/* Tema rojo/blanco extra */
+:root{ --accent:#dc2626 }
+.btn-primary{ background:#dc2626 }
+.btn-primary:hover{ filter:brightness(0.95) }
+

@@ -1,0 +1,47 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
+import Stripe from 'stripe'
+import { prisma } from '@/lib/db'
+import crypto from 'crypto'
+
+export const config = { api: { bodyParser: false } }
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' as any })
+
+async function buffer(readable: any) {
+  const chunks: any[] = []
+  for await (const chunk of readable) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+  return Buffer.concat(chunks)
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const sig = req.headers['stripe-signature'] as string
+  const buf = await buffer(req)
+  let event: Stripe.Event
+  try {
+    event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+  } catch (err: any) {
+    return res.status(400).send(`Webhook Error: ${err.message}`)
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session
+    const orderId = session.metadata?.orderId!
+
+    await prisma.$transaction(async(tx)=>{
+      const order = await tx.order.update({ where: { id: orderId }, data: { status: 'paid', stripeId: session.id } })
+      const items = await tx.orderItem.findMany({ where: { orderId: order.id }, include: { ticketType: true } })
+      for (const it of items) {
+        for (let k=0; k<it.quantity; k++) {
+          const qrSecret = crypto.randomBytes(24).toString('hex')
+          await tx.ticket.create({ data: {
+            orderItemId: it.id,
+            userId: order.userId,
+            status: 'PAID',
+            qrSecret
+          }})
+        }
+        await tx.ticketType.update({ where: { id: it.ticketTypeId }, data: { soldQty: { increment: it.quantity } } })
+      }
+    })
+  }
+  res.json({ received: true })
+}
